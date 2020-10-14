@@ -1,0 +1,76 @@
+[
+    {
+        "Name": "Gameboy",       
+        "Code": "DMG",
+        "Type": "Handheld",
+        "Manufacturer": "Nintendo"
+    },
+    {
+        "Name": "Gameboy Color",
+        "Code": "GBC",
+        "Type": "Handheld",
+        "Manufacturer": "Nintendo"
+    },
+    {
+        "Name": "Gameboy Advance",
+        "Code": "AGB",
+        "Type": "Handheld",
+        "Manufacturer": "Nintendo"
+    },
+    {
+        "Name": "NES",
+        "Code": "FC",
+        "Type": "Console",
+        "Manufacturer": "Nintendo"
+    },
+    {
+        "Name": "SNES",
+        "Code": "SFC",
+        "Type": "Console",
+        "Manufacturer": "Nintendo"
+    },
+    {
+        "Name": "Nintendo 64",
+        "Code": "N64",
+        "Type": "Console",
+        "Manufacturer": "Nintendo"
+    },
+    {
+        "Name": "WII",
+        "Code": "WII",
+        "Type": "Console",
+        "Manufacturer": "Nintendo"
+    },
+    {
+        "Name": "WII U",
+        "Code": "WIIU",
+        "Type": "Console",
+        "Manufacturer": "Nintendo"
+    },
+    {
+        "Name": "Switch",
+        "Code": "NS",
+        "Type": "Console",
+        "Manufacturer": "Nintendo"
+    },
+    {
+        "Name": "DS",
+        "Code": "NDS",
+        "Type": "Handheld",
+        "Manufacturer": "Nintendo"
+    },
+    {
+        "Name": "3DS",
+        "Code": "3DS",
+        "Type": "Handheld",
+        "Manufacturer": "Nintendo"
+    }
+    ,
+    {
+        "Name": "Virtual Boy",
+        "Code": "VB",
+        "Type": "Console",
+        "Manufacturer": "Nintendo"
+    }
+
+]

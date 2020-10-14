@@ -1,0 +1,12 @@
+[
+    {
+        "Name": "Software",
+        "Code": "Software",
+        "Description": "Software - Games/Apps"
+    },
+    {
+        "Name": "Hardware",
+        "Code": "Hardware",
+        "Description": "Hardware - Consoles/Accessories"
+    }
+]

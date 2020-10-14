@@ -1,0 +1,32 @@
+[
+    {
+        "Name": "Megadrive",      
+        "Code": "MD",
+        "Type": "Console"
+    },
+    {
+        "Name": "Genesis",       
+        "Code": "GEN",
+        "Type": "Console"
+    },
+    {
+        "Name": "Game Gear",       
+        "Code": "GG",
+        "Type": "Handheld"
+    },
+    {
+        "Name": "Master System",       
+        "Code": "MS",
+        "Type": "Console"
+    },
+    {
+        "Name": "Saturn",       
+        "Code": "SS",
+        "Type": "Console"
+    },
+    {
+        "Name": "Dreamcast",       
+        "Code": "DC",
+        "Type": "Console"
+    }
+]

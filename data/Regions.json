@@ -1,0 +1,20 @@
+[
+    {
+        "Name": "US",
+        "Code": "US",
+        "Description": "North America Region",
+        "Icon": "images/us-flag-icon-32.png"
+    },
+    {
+        "Name": "JP",
+        "Code": "JP",
+        "Description": "Japan Region",
+        "Icon": "images/jp-flag-icon-32.png"
+    },
+    {
+        "Name": "EU",
+        "Code": "EU",
+        "Description": "European Region",
+        "Icon": "images/eu-flag-icon-32.png"
+    }
+]

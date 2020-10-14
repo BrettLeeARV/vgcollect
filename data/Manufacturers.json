@@ -1,0 +1,44 @@
+[
+    {
+        "Name": "Atari",
+        "Code": "Atari",
+        "Description": "Atari",
+        "DataFile": "Atari.json"
+    },
+    {
+        "Name": "NEC",
+        "Code": "NEC",
+        "Description": "NEC",
+        "DataFile": "NEC.json"
+    },
+    {
+        "Name": "Nintendo",
+        "Code": "Nintendo",
+        "Description": "Nintendo",
+        "DataFile": "Nintendo.json"
+    },
+    {
+        "Name": "NeoGeo",
+        "Code": "NeoGeo",
+        "Description": "NeoGeo",
+        "DataFile": "NeoGeo.json"
+    },
+    {
+        "Name": "Sega",
+        "Code": "Sega",
+        "Description": "Sega",
+        "DataFile": "Sega.json"
+    },   
+    {
+        "Name": "Sony",
+        "Code": "Sony",
+        "Description": "Sony",
+        "DataFile": "Sony.json"
+    },   
+    {
+        "Name": "Others",
+        "Code": "Others",
+        "Description": "Others",
+        "DataFile": "Others.json"
+    }
+]

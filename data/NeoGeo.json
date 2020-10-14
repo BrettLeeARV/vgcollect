@@ -1,0 +1,12 @@
+[
+    {
+        "Name": "NeoGeo AES",      
+        "Code": "NG",
+        "Type": "Console"
+    },
+    {
+        "Name": "NeoGeo Pocket",      
+        "Code": "NGP",
+        "Type": "Handheld"
+    }
+]

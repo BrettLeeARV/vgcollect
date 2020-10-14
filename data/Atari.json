@@ -1,0 +1,27 @@
+[
+    {
+        "Name": "2600",       
+        "Code": "2600",
+        "Type": "Console"
+    },
+    {
+        "Name": "5200",       
+        "Code": "5200",
+        "Type": "Console"
+    },
+    {
+        "Name": "7800",      
+        "Code": "7800",
+        "Type": "Console"
+    },
+    {
+        "Name": "Lynx",       
+        "Code": "Lynx",
+        "Type": "Handheld"
+    },
+    {
+        "Name": "Jaguar",       
+        "Code": "JAG",
+        "Type": "Console"
+    }
+]

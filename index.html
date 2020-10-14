@@ -1,0 +1,908 @@
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#3f51b5"/>
+    <title>vg-collect</title>
+    <base href="/vgcollect/" />
+    <link href="css/app.css" rel="stylesheet" />
+    <link href="css/mdl/icon.css" rel="stylesheet" />
+    <link href="css/mdl/material.min.css" rel="stylesheet" >
+    <link href="css/mdl/getmdl-select.min.css" rel="stylesheet" >
+    <link href="css/mdl/mdl-currency-usd.min.css" rel="stylesheet" >
+    <link href="manifest.json" rel="manifest" />
+    <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
+  
+</head>
+
+<body>
+    <app>
+        <!-- Initial Loading Overlay -->
+        <div style="background-color: rgba(0, 0, 0, 0.5); display: flex;align-items: center; top: 0; right: 0; height: 100%; width: 100%; position: absolute; justify-content: center; z-index: 9999;">        
+            <div class="mdl-spinner mdl-spinner--single-color mdl-js-spinner is-active"></div>
+        </div> 
+    </app>
+    
+    <!-- What's new dialog -->
+    <dialog class="mdl-dialog" id="dialogWhatsNew">
+        <h4 class="mdl-dialog__title">What's New</h4>
+        <div class="mdl-dialog__content">
+            <h4><b>Version 1.0</b></h4>
+            <p>Welcome to the first release! </p>
+            <span>New Feature(s):</span>
+            <ul>
+                <li>
+                    <b>Quick add</b>
+                    <br>Snap a photo, give a temporary label and fill up the details later.
+                </li>
+                <li>
+                    <b>Backup/Restore</b>
+                    <br>Added basic backup & restore functionalities.
+                </li>
+            </ul>
+        </div>
+        <div class="mdl-dialog__actions">            
+            <button id="btnOk" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored mdl-js-ripple-effect" onclick="javascript: this.parentNode.parentNode.close();">
+                Ok
+            </button>
+        </div>
+    </dialog>
+    
+    <!-- Local Loading Overlay -->
+    <div id="loadingOverlay" class="d-none" style="background-color: rgba(255, 255, 255, 1); display: flex; align-items: center; top: 0; right: 0; height: 100%; width: 100%; position: absolute; justify-content: center; z-index: 2;">        
+        <div class="mdl-spinner mdl-spinner--single-color mdl-js-spinner is-active"></div>
+    </div> 
+   
+    <!-- New Item button -->
+    <div class="new-item-button">
+        <a href="camera">
+            <button id="btnNewItem" class="animate-grow mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored">
+                <i class="material-icons">add</i>
+            </button>
+            <div class="mdl-tooltip mdl-tooltip--large mdl-tooltip--left mdl-tooltip-arrow" style="font-size: 24px; line-height: 24px;" for="btnNewItem">
+                Start with a quick add!
+            </div>
+        </a>
+    </div>
+
+    <!-- Toast snackbar -->
+    <div id="demo-toast-example" class="mdl-js-snackbar mdl-snackbar">
+        <div class="mdl-snackbar__text"></div>
+        <button class="mdl-snackbar__action" type="button"></button>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+
+    <script src="_framework/blazor.webassembly.js"></script>    
+    <script src="scripts/webcam-easy.min.js"></script>
+    <script src="scripts/lovefield.min.js"></script>
+    <script defer src="scripts/material.min.js"></script>
+    <script defer src="scripts/getmdl-select.min.js"></script>
+    <script defer src="scripts/mdl-currency-usd.min.js"></script>
+    <script src="scripts/dbcontext.js"></script>
+    <script src="scripts/form/restore.js"></script>
+    <script src="scripts/form/camera.js"></script>
+    <script src="scripts/FileSaver.min.js"></script>    
+    <script src="scripts/tfjs.js"></script>
+    <script src="scripts/mobilenet.js"></script>
+    <script src="scripts/knn-classifier.js"></script>
+    <script>navigator.serviceWorker.register('service-worker.js');</script>
+    <script defer>
+        const _versionNo = 1;
+        const _dbContext = new DbContext('CollectionDb', 1);      
+        const _camera = new Camera();
+        const _classifier = knnClassifier.create();
+        let _net = null; 
+        let _cachedDataset = null;        
+
+        (() => {
+            const versionNoStr = "FirstRunSinceUpdate_" + _versionNo.toString();
+            const firstRunSinceUpdate = localStorage.getItem(versionNoStr);
+            if (firstRunSinceUpdate === null) {
+                dialogWhatsNew.showModal();
+                localStorage.setItem(versionNoStr, 1);
+            }
+        })();
+
+        navigator.serviceWorker.addEventListener('message', event => {
+            console.log(event.data.clearLocalStorage);
+            if (event.data.clearLocalStorage !== undefined || event.data.clearLocalStorage !== null)
+                window.localStorage.clear();
+        });
+
+        function showLoading() {
+            document.getElementById('loadingOverlay').classList.remove('d-none');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.add('fade-out');    
+            setTimeout(() => {
+                document.getElementById('loadingOverlay').classList.remove('fade-out');    
+                document.getElementById('loadingOverlay').classList.add('d-none');
+            }, 500);
+        }
+
+        function showFilterBar() {
+            document.querySelector('.search-panel > form').classList.add('d-none');
+            document.querySelector('.search-panel > .filter-bar').classList.remove('d-none');
+        }
+
+        function showSearchBox() {
+            document.querySelector('.search-panel > form').classList.remove('d-none');
+            document.querySelector('.search-panel > .filter-bar').classList.add('d-none');
+        }
+
+        async function loadFilterMenuItems(menuId, jsonFilename, level, initialText, filterObject) {
+            const menuULElement = document.querySelector('ul.mdl-menu[for="' + menuId + '"]'); 
+            const menuLabelElement = menuULElement.parentNode.parentNode.querySelector('span');
+            const btnCancel = menuULElement.parentNode.parentNode.querySelector('i.filter-cancel');
+
+            btnCancel.onclick = function(e) {                                    
+                const filterName = e.target.parentNode.getAttribute('for');
+                const lblFilter = e.target.parentNode.querySelector('span');
+
+                // Delete  previously saved filter from LocalStorage
+                localStorage.removeItem('collectionList_Filter_' + filterName);
+                localStorage.removeItem('collectionList_Filter_' + filterName + '_Value');
+
+                // Reset filter label
+                lblFilter.textContent = e.target.parentNode.getAttribute('for');
+                lblFilter.classList.remove('filter-enabled');
+                
+                // Hide cancel button    
+                e.target.classList.add('d-none');
+
+                showLoading();
+                if (filterName.toLowerCase() === 'platform') {
+                    //Apply parent Manufacturer filter
+                    const filterValue = document.querySelector('div.filter-container[for="Manufacturer"] > span').textContent;
+                    if (filterValue.toLowerCase() !== 'manufacturer')
+                        applyFilter("Manufacturer", filterValue);
+                }
+                else {
+                    //Clear platform list
+                    document.querySelector('ul.mdl-menu[for="Platform"]').innerHTML = '';
+                    //Render original dataset                    
+                    renderCollectionList(_cachedDataset);
+                }
+                hideLoading();
+            }           
+
+            if (!String.isNullOrEmpty(initialText))           
+                menuLabelElement.textContent = initialText;
+
+            if (!String.isNullOrEmpty(jsonFilename)) {
+
+                if (menuULElement !== null && menuULElement !== undefined) {
+                    let menuItems = await loadJsonData(jsonFilename);
+                    menuULElement.innerHTML = '';
+                    
+                    menuItems.forEach((i) => {
+                        const liElement = document.createElement('li');
+                        liElement.classList.add('mdl-menu__item')
+                        liElement.setAttribute('value', i.Code);
+                        liElement.innerText = i.Name;                    
+                        menuULElement.appendChild(liElement);                        
+
+                        liElement.addEventListener('click', (e) => {
+                            
+                            const filterName = e.target.parentNode.getAttribute('for');
+                            const filterValue = e.target.getAttribute('value');
+                            const btnCancel = e.target.parentNode.parentNode.parentNode.querySelector('i.filter-cancel');
+                            const lblFilter = e.target.parentNode.parentNode.parentNode.querySelector('span');
+
+                            applyFilter(filterName, filterValue);
+
+                            //Save selected filter to LocalStorage
+                            localStorage.setItem('collectionList_Filter_' + filterName, filterName);
+                            localStorage.setItem('collectionList_Filter_' + filterName + '_Value', filterValue);
+
+                            lblFilter.classList.add('filter-enabled');
+                            lblFilter.textContent = e.target.textContent;
+
+                            if (level === 1)
+                                loadFilterMenuItems('Platform', e.target.textContent + '.json', 2, 'Platform', filterObject);
+
+                            btnCancel.classList.remove('d-none');
+                            document.querySelector('body').click();
+                        });
+
+                        let itemKey =  filterObject.columnName + '_' + filterObject.operator + '_' +  filterObject.columnValue;
+
+                        if (localStorage.getItem('collectionList_Category') !== null &&
+                            localStorage.getItem('collectionList_Category') === itemKey) {
+                                if (localStorage.getItem('collectionList_Filter_' + menuId + '_Value') !== null && 
+                                    localStorage.getItem('collectionList_Filter_' + menuId + '_Value') === i.Code)
+                                        liElement.click();
+                        }
+                        else                           
+                            btnCancel.click();
+
+                    });               
+                }
+            }
+
+            //If Platform filter's cancel button is visible, trigger its click event to remove current the filter
+            if (menuId.toLowerCase() === 'platform' && String.isNullOrEmpty(jsonFilename) && !btnCancel.classList.contains('d-none'))
+                 btnCancel.click();
+        }
+
+        function initializeRestoreForm() {
+            const fileSelector = document.getElementById('file-selector');
+            const btnRestore = document.getElementById('btnRestore');
+            const restoreForm = new RestoreForm(_dbContext);
+            const snackbarContainer = document.querySelector('#demo-toast-example');
+            const ulDataFiles = document.querySelector('#ulDataFiles');
+
+            restoreForm.btnFileBrowse = fileSelector;
+            restoreForm.btnRestore = btnRestore;
+            restoreForm.OnValidateDataFileSuccess((f) => {                
+                btnRestore.disabled = false;
+                ulDataFiles.innerHTML = '<li class="mdl-list__item fade-in">' + f.name + '</li>';                
+            });
+            restoreForm.OnValidateDataFileFailure(() => {
+                btnRestore.disabled = true;
+                ulDataFiles.innerHTML = '';
+            });
+            restoreForm.OnRestoreSuccess((r) => {
+                snackbarContainer.MaterialSnackbar.showSnackbar({message: `Successfully restored!\n${r} records added.` });
+            });
+            restoreForm.OnRestoreFailure((r) => {
+                snackbarContainer.MaterialSnackbar.showSnackbar({message: `An error occured!\n${r}` });
+            });
+        }
+
+        function hideAddNewTooltip() {
+            document.querySelector(".mdl-tooltip").classList.remove('is-active');
+        }
+
+        function showAddNewTooltip() {
+            const btnNewItem = document.querySelector("#btnNewItem");
+            const tooltipBtnNewItem = document.querySelector(".mdl-tooltip[for='btnNewItem']");
+
+            if (String.isNullOrEmpty(tooltipBtnNewItem.getAttribute('startup-triggered'))) {
+                
+                var props = btnNewItem.getBoundingClientRect();
+                var left = props.left + (props.width / 2);
+                var top = props.top + (props.height / 2);
+                var marginLeft = -1 * (tooltipBtnNewItem.offsetWidth / 2);
+                var marginTop = -1 * (tooltipBtnNewItem.offsetHeight / 2);
+
+                if (tooltipBtnNewItem.classList.contains('mdl-tooltip--left') || tooltipBtnNewItem.classList.contains('mdl-tooltip--right')) {
+                    left = (props.width / 2);
+                    if (top + marginTop < 0) {
+                        tooltipBtnNewItem.style.top = '0';
+                        tooltipBtnNewItem.style.marginTop = '0';
+                    } else {
+                        tooltipBtnNewItem.style.top = top + 'px';
+                        tooltipBtnNewItem.style.marginTop = marginTop + 'px';
+                    }
+                } else {
+                    if (left + marginLeft < 0) {
+                        tooltipBtnNewItem.style.left = '0';
+                        tooltipBtnNewItem.style.marginLeft = '0';
+                    } else {
+                        tooltipBtnNewItem.style.left = left + 'px';
+                        tooltipBtnNewItem.style.marginLeft = marginLeft + 'px';
+                    }
+                }
+
+                if (tooltipBtnNewItem.classList.contains('mdl-tooltip--top')) {
+                    tooltipBtnNewItem.style.top = props.top - tooltipBtnNewItem.offsetHeight - 10 + 'px';
+                } else if (tooltipBtnNewItem.classList.contains('mdl-tooltip--right')) {
+                    tooltipBtnNewItem.style.left = props.left + props.width + 10 + 'px';
+                } else if (tooltipBtnNewItem.classList.contains('mdl-tooltip--left')) {
+                    tooltipBtnNewItem.style.left = props.left - tooltipBtnNewItem.offsetWidth - 10 + 'px';
+                } else {
+                    tooltipBtnNewItem.style.top = props.top + props.height + 10 + 'px';
+                }
+
+                tooltipBtnNewItem.classList.add('is-active');
+                tooltipBtnNewItem.setAttribute('startup-triggered', '1');
+                setTimeout(() => {
+                    tooltipBtnNewItem.classList.remove('is-active');
+                }, 1500);
+            }
+        }
+
+        async function showDialog() {
+            const dialog = document.querySelector('dialog');            
+            dialog.showModal();
+
+            if (mobilenet !== undefined) {               
+
+                let running = true;
+                let prevClassValue;
+
+                while (running) {
+                    if (_classifier.getNumClasses() > 0) {
+
+                        try {
+                            // Get the activation from mobilenet from the webcam.
+                            const activation = _net.infer(canvas, 'conv_preds');
+                            // Get the most likely class and confidence from the _classifier module.
+                            const result = await _classifier.predictClass(activation);
+
+                            const classes = ['Gameboy Color', 'Gameboy DMG', 'Cartridge'];
+                            // console.log(`prediction: ${classes[result.label]}\n
+                            //             probability: ${result.confidences[result.label]}
+                            //             `);
+
+                            // Predict and ouput result
+                            collectionName.value = classes[result.label];
+
+                            // Confirm result by making sure at least same result is presented twice
+                            if (prevClassValue === classes[result.label])
+                                running = false;
+                            else
+                                prevClassValue = classes[result.label];
+                        }
+                        catch (e) {
+                            console.error(e);
+                            running = false;
+                        }
+                    }
+
+                    //await tf.nextFrame();
+                }
+
+            }
+        }
+
+        function InitializeWebcam(callerPageURI) {            
+
+            _camera.WebcamElement = document.getElementById('webcam');
+            _camera.CanvasElement = document.getElementById('canvas');
+            _camera.SnapSoundElement = document.getElementById('snapSound'); 
+            _camera.CameraSnapElement = document.getElementById('cameraSnap');
+            _camera.CameraOkElement = document.getElementById('cameraDone');
+            _camera.CameraCancelElement = document.getElementById('cameraCancel');
+            _camera.LoadingElement = document.getElementById('cameraLoading');
+            _camera.Init();
+            _camera.Start();
+            _camera.FlipWebcam();
+
+            initTFEnviroment();
+           
+            const btnSave = document.getElementById('btnSave');
+            const btnCancel = document.getElementById('btnCancel');           
+            const dialog = document.querySelector('dialog');
+
+            cameraCancel.addEventListener('click', (e) => {
+                e.preventDefault();
+                _camera.Start();
+            });
+
+            btnSave.addEventListener('click', (e)=> {                
+                e.preventDefault();
+                const snackbarContainer = document.querySelector('#demo-toast-example');                
+                SaveToDb()
+                .then((r) => {
+                    if (r === 1) {   
+                        updateBlazorMainLayoutUI();                     
+                        dialog.close();
+                        ClearForm();
+                        _camera.Start();
+                        snackbarContainer.MaterialSnackbar.showSnackbar({message: 'Successfully saved!' });
+                    }
+                });
+            });
+
+            btnCancel.addEventListener('click', (e) => {
+                e.preventDefault();
+                dialog.close();
+            })
+        }
+
+        function updateBlazorMainLayoutUI() {
+            if (this._blazorMainLayoutInstance !== undefined)
+                this._blazorMainLayoutInstance.invokeMethodAsync('UpdateUI');
+        }
+
+        function setMainLayoutInstance(blazorMainLayoutInstance) {
+            this._blazorMainLayoutInstance = blazorMainLayoutInstance;
+        };
+
+        async function initTFEnviroment() {
+            const dataset = await fetch('data/ClassifierData.json');
+            let tensorObj = await dataset.json();
+            _classifier.setClassifierDataset( 
+                Object.fromEntries( 
+                        tensorObj.map(
+                            ([label, data, shape])=>
+                                [label, tf.tensor(data, shape)]
+                            )
+                        ) 
+                );
+            console.log('KNN classifier successfully loaded!');
+            console.log('Loading mobilenet..');
+            // Load the model.
+            _net = await mobilenet.load();
+            console.log('Successfully loaded model');
+        }
+
+        function mdlUpgradeDom() {
+            //Trigger MDL dom upgrade
+            componentHandler.upgradeDom();            
+        }
+        
+        async function displaySummary() {            
+            const summaryElement = document.querySelector('#mdlcardSmmary div.mdl-card__supporting-text');
+            const currentDate = new Date();
+            const ratingsData = await loadJsonData('Ratings.json');
+            const query = _dbContext.SelectAll('Collections', dataObjectModel());
+            let summaryHTML = '';
+
+            query.then((r) => {
+                const addedTodayCount = r.filter((i) => {
+                                            return i.Created.getDate() == currentDate.getDate() && 
+                                                   i.Created.getMonth() == currentDate.getMonth() &&
+                                                   i.Created.getYear() == currentDate.getYear();
+                                        }).length;
+            
+                let iconPlaceholder = addedTodayCount === 0 ? addedTodayCount : `<div class="material-icons mdl-badge mdl-badge--overlap" data-badge="${addedTodayCount}">fiber_new</div>`;
+
+                //const itemCount = 62;
+                const itemCount = r.length;
+
+                const [rating] = ratingsData.filter(i => {
+                    return i.Min <= itemCount && i.Max >= itemCount;
+                });
+
+                let totalValue = 0;
+                r.forEach((i) => {
+                    if (i.Value !== undefined && i.Value !== null && !isNaN(i.Value) && !String.isNullOrEmpty(i.Value))
+                        totalValue += parseFloat(i.Value);
+                });
+
+                summaryHTML = `<div>Items added today <span class="right-aligned">${iconPlaceholder}</span></div>`;
+                summaryHTML += `<div>Total  size <span class="right-aligned"><b>${itemCount}</b></span></div>`;
+                summaryHTML += `<div>Rating <span class="right-aligned" style="display: inherit; align-items: center;">`;
+                    
+                for (let i = 1; i <= 5; i++) {
+                    if (rating !== undefined && i <= rating.RatingValue)
+                        summaryHTML += `<i class="material-icons" style="padding-left: 5px;">star</i>`;
+                    else
+                        summaryHTML += `<i class="material-icons" style="padding-left: 5px;">star_border</i>`;
+                }
+                summaryHTML += '</span></div>';
+                summaryHTML += `<div>Valued at <span class="right-aligned"><b>${currencyFormat(totalValue)}</b></span></div>`;
+
+                summaryElement.innerHTML = summaryHTML;
+            });            
+        }
+
+        function ClearForm(){
+            document.querySelector('#collectionName').value = "";
+            document.querySelector('#collectionDesc').value = "";
+        }
+
+        function deleteRow(id) {
+            const snackbarContainer = document.querySelector('#demo-toast-example');
+            const schemaBuilder = lf.schema.create('CollectionDb', 1);
+            const itemRowElement = document.querySelectorAll('.mdl-card[itemId="' + id + '"]')[0];
+
+            _dbContext.DeleteById('Collections', dataObjectModel(), id)
+                .then(() => {
+                    itemRowElement.classList.add('fade-out');
+                    snackbarContainer.MaterialSnackbar.showSnackbar({message: 'Item removed successfully' });
+                });
+
+            itemRowElement.addEventListener('animationend', (e) => {
+                const curElement = e.srcElement;
+                curElement.parentNode.removeChild(curElement);
+            })
+        }
+
+        function toggleFavorite(id, favButtonElement) {            
+            let favIcon = favButtonElement.querySelector('i.material-icons').innerText;
+            let dataObject = { 
+                                Id: id, 
+                                Favourite: favIcon === 'favorite_border' ? '1' : '0'
+                            };
+            
+            _dbContext.Update('Collections', dataObject).then(() => {
+                if (favIcon === 'favorite_border')
+                    favButtonElement.querySelector('i.material-icons').innerText = 'favorite';
+                else
+                    favButtonElement.querySelector('i.material-icons').innerText = 'favorite_border';
+            });
+        }
+
+        function initSearch() {
+            const txtSearch = document.querySelector('input#txtSearch');            
+            let queryInput = null;
+            let cachedQueryInput;
+            var timer = null;                      
+
+            txtSearch.addEventListener('keyup', e => {
+                if (e.target.value !== queryInput && timer === null) {
+                    timer = setInterval(runQueryCallback, 500);
+                }
+                queryInput = e.target.value;
+            });
+
+            function runQueryCallback() {
+                if (queryInput !== null && cachedQueryInput === queryInput) {
+                    loadData('Name', queryInput, 'match');
+                    clearInterval(timer);
+                    timer = null;
+                }
+                cachedQueryInput = queryInput;
+            }
+        }
+
+        function clearSearch() {
+            const txtSearch = document.querySelector('input#txtSearch'); 
+            txtSearch.value = '';
+        }
+
+        function dataObjectModel() {            
+            const dataObjectModel = {
+                Name: '',
+                Desc: '',                
+                Photo: '',
+                Manufacturer: '',
+                Favourite: '',
+                Category: '',
+                Region: '',
+                Platform: '',
+                Value: 0
+            }
+            return dataObjectModel;
+        }
+
+        async function loadJsonData(jsonDataFileName) {
+            const jsonData = await fetch('data/' + jsonDataFileName);
+            return jsonData.json();
+        }
+
+        function loadDropDown(targetId, value, jsonDataFileName) {
+            const ddlTarget = document.querySelector('.getmdl-select ul[for="' + targetId + '"]');
+            const ddlTarget_hidden = document.querySelector('.getmdl-select input[name="' + targetId + '"]');
+
+            ddlTarget_hidden.value = value;
+
+            return loadJsonData(jsonDataFileName).then((results) => {
+                ddlTarget.innerHTML = '';
+                results.forEach((key, idx) => {
+                    let newOptionElement = document.createElement('li');                        
+                    if (key.Code === value)
+                        newOptionElement.classList.add('selected');
+
+                    newOptionElement.classList.add('mdl-menu__item');
+                    newOptionElement.setAttribute('data-val', key.Code);
+                    newOptionElement.appendChild(document.createTextNode(key.Name));
+
+                    ddlTarget.appendChild(newOptionElement);                      
+                });
+                return Promise.resolve(1);
+            });            
+        }
+
+        function backupTableToFile() {
+            const query = _dbContext.SelectAll('Collections', dataObjectModel());
+            const currentDate = new Date();
+            let yyyy, mm, dd;
+
+            query.then((r) => {
+                const jsonTableContent = JSON.stringify(r);
+                const blob = new Blob([jsonTableContent], {type: "text/plain;charset=utf-8"});
+                yyyy = currentDate.getFullYear();
+                mm = currentDate.getMonth() + 1;
+                dd = currentDate.getDate();
+                let dateString = `${yyyy}${mm < 10 ? '0' + mm : mm}${dd < 10 ? '0' + dd : dd}`;
+
+                saveAs(blob, 'VG-Collect_' + dateString + '.json');
+            });
+        }
+
+        async function getUncategorizedItems() {
+            const query =  await _dbContext.SelectByFilter('Collections', dataObjectModel(), 'Category', '', 'eq');            
+            return query.length;
+        }
+
+        function renderCollectionList(dataset) {
+            const parentContainer = document.getElementById('cListContainer'); 
+            parentContainer.innerHTML = ''; 
+            
+            dataset.forEach((item) => {
+                const mdlCardRoot = document.createElement("div");
+                mdlCardRoot.classList.add("mdl-cell", "mdl-card", "mdl-shadow--4dp", "portfolio-card");
+                mdlCardRoot.setAttribute('itemId', item.Id);
+                const mdlCardMedia = document.createElement("div");
+                mdlCardMedia.classList.add("mdl-card__media");
+                const aCardMediaImg = document.createElement('a');
+                aCardMediaImg.setAttribute('href', 'detail/' + item.Id);
+                const mdlCardMediaImg = document.createElement("img");
+                mdlCardMediaImg.classList.add("article-image");
+                mdlCardMediaImg.setAttribute("src", item.Photo);
+                mdlCardMediaImg.setAttribute("border", "0");
+                mdlCardMediaImg.setAttribute("alt", "");
+                // mdlCardMediaImg.addEventListener('load', (e) => {
+                //     e.target.classList.add('fade-in');
+                // });
+                
+                aCardMediaImg.appendChild(mdlCardMediaImg);
+                mdlCardMedia.appendChild(aCardMediaImg);
+
+                const mdlCardTitle = document.createElement("div");
+                mdlCardTitle.classList.add("mdl-card__title");
+                mdlCardTitle.innerHTML = '<h2 class="mdl-card__title-text">' + item.Name + '</h2>';
+                                            
+                if (!(String.isNullOrEmpty(item.Manufacturer) && String.isNullOrEmpty(item.Platform))) {
+                    mdlCardTitle.innerHTML += '<div class="platform-icon">' + 
+                                                '<img src="images/icons/platform/' + item.Platform + '-icon-64.png" style="max-height: 64px;" alt=""/>' +
+                                            '</div>';                    
+                }
+                const mdlCardText = document.createElement("div");
+                mdlCardText.classList.add("mdl-card__supporting-text");
+                //mdlCardText.appendChild(document.createTextNode(item.Desc));
+                mdlCardText.appendChild(document.createTextNode(item.Created.toDateString()));
+
+                const mdlCardActions = document.createElement("div");
+                mdlCardActions.classList.add("mdl-card__actions", "mdl-card--border");                        
+                
+                mdlCardActions.innerHTML =                     
+                '<button id="btnMoreActions_' + item.Id + '" class="mdl-button mdl-js-button mdl-button--icon">' +
+                    '<i class="material-icons">more_vert</i>' +
+                '</button>' +
+                '<ul class="mdl-menu mdl-menu--top-left mdl-js-menu mdl-js-ripple-effect" data-mdl-for="btnMoreActions_' + item.Id + '">' +
+                '<a href="detail/' + item.Id + '" ><li class="mdl-menu__item mdl-color-text--accent" >Modify</li></a>' +
+                '<li class="mdl-menu__item mdl-color-text--accent" onclick="deleteRow(' + item.Id + ');">Delete</li>' +
+                '</ul>';
+
+                const mdlCardMenu = document.createElement('div');
+                mdlCardMenu.classList.add('mdl-card__menu');
+
+                const mdlCardMenuButton = document.createElement('button');
+                mdlCardMenuButton.classList.add('mdl-button', 'mdl-button--accent', 'mdl-button--icon', 'mdl-js-button', 'mdl-js-ripple-effect');
+                mdlCardMenuButton.setAttribute('onclick', 'toggleFavorite(' + item.Id + ', this);');                    
+                const mdlCardMenuButtonIcon = document.createElement('i');
+                mdlCardMenuButtonIcon.classList.add('material-icons');
+                
+                if (item.Favourite === '1')
+                    mdlCardMenuButtonIcon.appendChild(document.createTextNode('favorite'));
+                else
+                    mdlCardMenuButtonIcon.appendChild(document.createTextNode('favorite_border'));
+
+                const regionIcon = document.createElement('div');
+                regionIcon.classList.add('region-icon');
+                if (!String.isNullOrEmpty(item.Region))
+                    regionIcon.innerHTML = '<img src="images/icons/region/' + item.Region + '-flag-icon-32.png" alt="' + item.Region + '"/>';                        
+
+                mdlCardMenuButton.appendChild(mdlCardMenuButtonIcon);
+                mdlCardMenu.appendChild(mdlCardMenuButton);
+
+                mdlCardRoot.appendChild(mdlCardMedia);
+                mdlCardRoot.appendChild(mdlCardTitle);
+                mdlCardRoot.appendChild(mdlCardText);
+                mdlCardRoot.appendChild(mdlCardActions);
+                mdlCardRoot.appendChild(mdlCardMenu);
+                mdlCardRoot.appendChild(regionIcon);
+
+                parentContainer.appendChild(mdlCardRoot);
+                
+            });
+            mdlUpgradeDom();
+        }
+        
+        function applyFilter(filterColumnName, filterColumnValue) {
+            if (_cachedDataset !== null) {
+                const filteredDataset = _cachedDataset.filter((i) => {
+                    return i[filterColumnName] == filterColumnValue;
+                });
+                renderCollectionList(filteredDataset);
+            }
+        }
+
+        function loadData(queryColumnName, queryColumnValue, queryOperator) {
+            const loadingOverlay = document.getElementById('loadingOverlay');            
+            const snackbarContainer = document.querySelector('#demo-toast-example');
+            const parentContainer = document.getElementById('cListContainer');
+            
+            parentContainer.innerHTML = ''; 
+
+            if (queryColumnValue === null) queryColumnValue = '';
+            
+            if (!String.isNullOrEmpty(queryOperator) && (!String.isNullOrEmpty(queryColumnName)))
+                query = _dbContext.SelectByFilter('Collections', dataObjectModel(), queryColumnName, queryColumnValue, queryOperator);            
+            else
+                query = _dbContext.SelectAll('Collections', dataObjectModel());
+
+            query.then((r) => {                
+                _cachedDataset = r;
+                renderCollectionList(r);
+            }).catch((e) => {
+                snackbarContainer.MaterialSnackbar.showSnackbar({message: `An Error occured! ${e.message}`});
+            }); 
+        }
+
+        function loadDataRow(id, loadLastCapture) {
+            const btnSave = document.querySelector('button#btnSave');
+            const btnClose = document.querySelector('button#btnCancel');
+            const snackbarContainer = document.querySelector('#demo-toast-example');
+            const imgElement = document.querySelector('.mdl-card__media > a > img');
+            const nameElement = document.querySelector('#collectionName');
+            const descElement = document.querySelector('#collectionDesc');
+            const schemaBuilder = lf.schema.create('CollectionDb', 1);
+            const ddlManufacturer = document.querySelector('input[id="ddlManufacturer"]');           
+            const txtValue = document.querySelector('#value');
+
+            _dbContext.SelectById('Collections', dataObjectModel(), id)
+            .then((rows) => {
+                rows.forEach((item) => {
+                    
+                    if (loadLastCapture !== undefined && loadLastCapture === "1")
+                        item.Photo = _camera.LastCapture;
+
+                    imgElement.setAttribute('src', item.Photo);
+                    imgElement.parentNode.href = 'camera/detail/' + id;
+
+                    nameElement.parentNode.MaterialTextfield.change(item.Name);
+                    descElement.parentNode.MaterialTextfield.change(item.Desc);
+                    
+                    if (item.Value !== undefined && item.Value !== null) {
+                        txtValue.parentNode.MaterialCurrencyTextfield.change(item.Value);
+                        txtValue.parentNode.MaterialCurrencyTextfield.init();
+                    }
+                    
+                    //Load dropdown combos. If they have values, manually trigger click event to render 
+                    //getmdlSelect controls
+                    Promise.all([
+                                    loadDropDown('ddlCategory', item.Category, 'Categories.json'),
+                                    loadDropDown('ddlManufacturer', item.Manufacturer, 'Manufacturers.json'),
+                                    loadDropDown('ddlRegion', item.Region, 'Regions.json')
+                                ])
+                                .then(() => {
+                                    //Init getmdlselect controls
+                                    getmdlSelect.init('.getmdl-select');                                    
+                                    if (!String.isNullOrEmpty(item.Category)) {                                        
+                                        document.querySelector('ul[for="ddlCategory"] li.selected').click();
+                                    }
+                                    if (!String.isNullOrEmpty(item.Manufacturer)) {
+                                        document.querySelector('ul[for="ddlManufacturer"] li.selected').click();
+                                    }
+                                    if (!String.isNullOrEmpty(item.Region)) {                                        
+                                        document.querySelector('ul[for="ddlRegion"] li.selected').click();
+                                    }                                     
+                                    if (!String.isNullOrEmpty(item.Platform)) {
+                                        loadDropDown('ddlPlatform', item.Platform, item.Manufacturer + '.json').then(() => {
+                                            getmdlSelect.init('.getmdl-select-platform');                                            
+                                            document.querySelector('ul[for="ddlPlatform"] li.selected').click();
+                                        });
+                                    }
+                                });
+
+                    document.querySelector('body').click();
+                });
+            });
+
+            ddlManufacturer.addEventListener('change', (e) => {
+                const selectedManufacturer = e.target.value;                
+                loadDropDown('ddlPlatform', '', selectedManufacturer + '.json').then(() => {
+                    getmdlSelect.init('.getmdl-select-platform');
+                    document.querySelector('body').click();
+                });
+            });
+
+            btnClose.addEventListener('click', (e) => {
+                e.preventDefault();
+                window.history.back();
+            });
+        }
+
+        function showSnackbar(message) {
+            const snackbarContainer = document.querySelector('#demo-toast-example');
+            snackbarContainer.MaterialSnackbar.showSnackbar({message: message });                    
+        }
+        
+        function saveDataRow(id) {
+
+            const collectionName = document.querySelector('#collectionName').value;
+            const collectionDesc = document.querySelector('#collectionDesc').value;
+            const manufacturer = document.querySelector('[name="ddlManufacturer"]').value;
+            const category = document.querySelector('[name="ddlCategory"]').value;
+            const region = document.querySelector('[name="ddlRegion"]').value;
+            const platform = document.querySelector('[name="ddlPlatform"]').value;
+            const value = document.querySelector('input[id="value"]').value;
+
+            //let dataObject = dataObjectModel();
+            let dataObject = { 
+                                Id: parseInt(id), 
+                                Name: collectionName, 
+                                Desc: collectionDesc,
+                                Manufacturer: manufacturer,
+                                Category: category,
+                                Region: region,
+                                Platform: platform,
+                                Value: parseFloat(value.replace(',', ''))
+                            };
+            
+            return _dbContext.Update('Collections', dataObject);
+        }
+
+        function SaveToDb() {
+
+            const collectionNameElement = document.querySelector('#collectionName');
+            const collectionName = collectionNameElement.value;
+            const collectionDesc = document.querySelector('#collectionDesc').value;
+            const snackbarContainer = document.querySelector('#demo-toast-example');
+
+            if (String.isNullOrEmpty(collectionName)) {
+                if (!collectionNameElement.parentNode.classList.contains('is-invalid'))
+                    collectionNameElement.parentNode.classList.add('is-invalid');
+                return Promise.reject();
+            }
+
+            let dataObject = dataObjectModel();
+            dataObject.Name = collectionName;
+            dataObject.Desc = collectionDesc;
+            dataObject.Created  = new Date();
+            dataObject.Photo = _camera.LastCapture;
+            
+            return _dbContext.Insert('Collections', dataObject);
+        }
+
+        function SetActivePage(currentPage) {            
+            // Closes mobile navigation on new dynamic page load
+            if (document.querySelectorAll('.mdl-layout__obfuscator.is-visible').length > 0)
+                document.querySelector('.mdl-layout__obfuscator').click();
+
+            // Make NewItem button appear on all other pages (except camera and detail page)
+            if (currentPage === 'detail' || currentPage === 'camera')
+                btnNewItem.classList.add('d-none');
+            else
+                btnNewItem.classList.remove('d-none');
+
+            // Stop webcam module, if it has been initialized/opened previously
+            if (typeof _camera !== 'undefined' && _camera !== null)
+                _camera.Stop();
+
+            // Set current active link on nav bar menu
+            const links = document.querySelectorAll('.mdl-navigation__link');
+            links.forEach((item) => {
+                if (item.getAttribute('href') === currentPage) {
+                    document.querySelector('#pageTitle').innerText = '[ ' + printNextSiblingText(item.querySelector('i'))  + ' ]';
+                    item.classList.add('is-active');
+                }
+                else
+                    item.classList.remove('is-active');
+            });
+        }
+
+        function printNextSiblingText(targetElement) {
+            let appendText = '';
+            if (targetElement !== undefined && targetElement !== null) {
+                let currentSibling = targetElement.nextSibling;
+                appendText = currentSibling.textContent;
+
+                while (currentSibling.nextSibling !== null && currentSibling.nextSibling !== undefined) {
+                    currentSibling = currentSibling.nextSibling;
+                    appendText += currentSibling.textContent;
+                }
+            }
+            return appendText === '' ? 'Home' : appendText;
+        }
+
+        function scrollToTop() {
+            document.querySelector('.mdl-layout__content').scrollTop = 0;
+        }
+
+        String.isNullOrEmpty = function (value) {                
+            return !value;
+        }
+
+        function currencyFormat(num) {
+            return '$' + num.toFixed(2).replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
+        }
+
+    </script>
+</body>
+
+</html>

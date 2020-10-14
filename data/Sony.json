@@ -1,0 +1,79 @@
+[
+    {
+        "Name": "PS1",
+        "Release_JP": "",
+        "Release_NA": "",
+        "Release_EU": "",
+        "Description": "The PlayStation[a] (PS, commonly known as the PS1 or its codename PSX) is a home video game console developed and marketed by Sony Computer Entertainment",
+        "Wiki": "https://en.wikipedia.org/wiki/PlayStation_(console)",
+        "Code": "PS1",
+        "Type": "Console",
+        "Manufacturer": "Sony"
+    },
+    {
+        "Name": "PS2",
+        "Release_JP": "",
+        "Release_NA": "",
+        "Release_EU": "",
+        "Description": "The PlayStation[a] (PS, commonly known as the PS1 or its codename PSX) is a home video game console developed and marketed by Sony Computer Entertainment",
+        "Wiki": "https://en.wikipedia.org/wiki/PlayStation_(console)",
+        "Code": "PS2",
+        "Type": "Console",
+        "Manufacturer": "Sony"
+    },
+    {
+        "Name": "PS3",
+        "Release_JP": "",
+        "Release_NA": "",
+        "Release_EU": "",
+        "Description": "The PlayStation[a] (PS, commonly known as the PS1 or its codename PSX) is a home video game console developed and marketed by Sony Computer Entertainment",
+        "Wiki": "https://en.wikipedia.org/wiki/PlayStation_(console)",
+        "Code": "PS3",
+        "Type": "Console",
+        "Manufacturer": "Sony"
+    },
+    {
+        "Name": "PS4",
+        "Release_JP": "",
+        "Release_NA": "",
+        "Release_EU": "",
+        "Description": "The PlayStation[a] (PS, commonly known as the PS1 or its codename PSX) is a home video game console developed and marketed by Sony Computer Entertainment",
+        "Wiki": "https://en.wikipedia.org/wiki/PlayStation_(console)",
+        "Code": "PS4",
+        "Type": "Console",
+        "Manufacturer": "Sony"
+    },
+    {
+        "Name": "PS5",
+        "Release_JP": "",
+        "Release_NA": "",
+        "Release_EU": "",
+        "Description": "The PlayStation[a] (PS, commonly known as the PS1 or its codename PSX) is a home video game console developed and marketed by Sony Computer Entertainment",
+        "Wiki": "https://en.wikipedia.org/wiki/PlayStation_(console)",
+        "Code": "PS5",
+        "Type": "Console",
+        "Manufacturer": "Sony"
+    },
+    {
+        "Name": "PSP",
+        "Release_JP": "",
+        "Release_NA": "",
+        "Release_EU": "",
+        "Description": "The PlayStation[a] (PS, commonly known as the PS1 or its codename PSX) is a home video game console developed and marketed by Sony Computer Entertainment",
+        "Wiki": "https://en.wikipedia.org/wiki/PlayStation_(console)",
+        "Code": "PSP",
+        "Type": "Handheld",
+        "Manufacturer": "Sony"
+    },
+    {
+        "Name": "PSVita",
+        "Release_JP": "",
+        "Release_NA": "",
+        "Release_EU": "",
+        "Description": "The PlayStation[a] (PS, commonly known as the PS1 or its codename PSX) is a home video game console developed and marketed by Sony Computer Entertainment",
+        "Wiki": "https://en.wikipedia.org/wiki/PlayStation_(console)",
+        "Code": "PSVita",
+        "Type": "Handheld",
+        "Manufacturer": "Sony"
+    }
+]

@@ -1,0 +1,43 @@
+[
+    {
+        "Min": 1,
+        "Max": 20,
+        "Label": "Beginner",
+        "Color": "darkgreen",
+        "Icon": "face",
+        "RatingValue": 1
+    },
+    {
+        "Min": 21,
+        "Max": 40,
+        "Label": "Picking up",
+        "Color": "darkyellow",
+        "Icon": "face",
+        "RatingValue": 2
+    },
+    {
+        "Min": 41,
+        "Max": 60,
+        "Label": "Average",
+        "Color": "darkorange",
+        "Icon": "face",
+        "RatingValue": 3
+    },
+    {
+        "Min": 61,
+        "Max": 80,
+        "Label": "Above average",
+        "Color": "darkred",
+        "Icon": "videogame_asset",
+        "RatingValue": 4
+    }
+    ,
+    {
+        "Min": 81,
+        "Max": 100,
+        "Label": "Impressive",
+        "Color": "red",
+        "Icon": "videogame_asset",
+        "RatingValue": 5
+    }
+]
