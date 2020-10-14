@@ -314,44 +314,44 @@
             const dialog = document.querySelector('dialog');            
             dialog.showModal();
 
-            if (mobilenet !== undefined) {               
+            // if (mobilenet !== undefined) {               
 
-                let running = true;
-                let prevClassValue;
+            //     let running = true;
+            //     let prevClassValue;
 
-                while (running) {
-                    if (_classifier.getNumClasses() > 0) {
+            //     while (running) {
+            //         if (_classifier.getNumClasses() > 0) {
 
-                        try {
-                            // Get the activation from mobilenet from the webcam.
-                            const activation = _net.infer(canvas, 'conv_preds');
-                            // Get the most likely class and confidence from the _classifier module.
-                            const result = await _classifier.predictClass(activation);
+            //             try {
+            //                 // Get the activation from mobilenet from the webcam.
+            //                 const activation = _net.infer(canvas, 'conv_preds');
+            //                 // Get the most likely class and confidence from the _classifier module.
+            //                 const result = await _classifier.predictClass(activation);
 
-                            const classes = ['Gameboy Color', 'Gameboy DMG', 'Cartridge'];
-                            // console.log(`prediction: ${classes[result.label]}\n
-                            //             probability: ${result.confidences[result.label]}
-                            //             `);
+            //                 const classes = ['Gameboy Color', 'Gameboy DMG', 'Cartridge'];
+            //                 // console.log(`prediction: ${classes[result.label]}\n
+            //                 //             probability: ${result.confidences[result.label]}
+            //                 //             `);
 
-                            // Predict and ouput result
-                            collectionName.value = classes[result.label];
+            //                 // Predict and ouput result
+            //                 collectionName.value = classes[result.label];
 
-                            // Confirm result by making sure at least same result is presented twice
-                            if (prevClassValue === classes[result.label])
-                                running = false;
-                            else
-                                prevClassValue = classes[result.label];
-                        }
-                        catch (e) {
-                            console.error(e);
-                            running = false;
-                        }
-                    }
+            //                 // Confirm result by making sure at least same result is presented twice
+            //                 if (prevClassValue === classes[result.label])
+            //                     running = false;
+            //                 else
+            //                     prevClassValue = classes[result.label];
+            //             }
+            //             catch (e) {
+            //                 console.error(e);
+            //                 running = false;
+            //             }
+            //         }
 
-                    //await tf.nextFrame();
-                }
+            //         //await tf.nextFrame();
+            //     }
 
-            }
+            // }
         }
 
         function InitializeWebcam(callerPageURI) {            

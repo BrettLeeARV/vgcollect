@@ -325,7 +325,7 @@
       "url": "images\/Sony\/Logo.png"
     },
     {
-      "hash": "sha256-uOCMhRaWSSSL6eeUNq+zUce1ewBV\/55bdazL\/QQW6mo=",
+      "hash": "sha256-SxLUChhLQwVFuCRRI9YUal\/KU4lGPY7UNYva0dKOwdQ=",
       "url": "index.html"
     },
     {
@@ -521,5 +521,5 @@
       "url": "_framework\/blazor.boot.json"
     }
   ],
-  "version": "MOS6wJHs"
+  "version": "5UhBWjFF"
 };
